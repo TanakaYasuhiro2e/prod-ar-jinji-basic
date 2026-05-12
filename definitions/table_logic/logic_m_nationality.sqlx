@@ -1,0 +1,69 @@
+config {
+  type: "view",
+  schema: "prod_logic_ar_jinji_basic",
+  name: "logic_m_nationality",
+  description: "地域の分類に「ASEAN」を追加",
+  tags: [constants.CATEGORY_TAG.common_master],
+  bigquery: {
+    labels:{
+      "df_repository": "ws_shared_jinji-basic",
+      "step": constants.CATEGORY_STEP.logic,
+      "use": constants.CATEGORY_USE_CONTENTS.ar
+    }
+  }
+}
+
+js {
+  // 共通マスタを「人事給与システム」でフィルタするたｍ（constants.jsで定義）
+ const sys_code = constants.SQL_PARAMETER.system_code;
+}
+
+select
+    system_code,
+    key_code,
+    key_name,
+    country_code,
+    country_name,
+    country_sort,
+    country_short_name,
+    country_en_name,
+    region_code,
+    region_name,
+    region_sort,
+    sas_map_id,
+    iso_code,
+    latitude_value,
+    longitude_value,
+    case 
+        when country_name IN ("インドネシア","カンボジア","シンガポール","タイ","フィリピン","ブルネイ","ベトナム","マレーシア","ミャンマー","ラオス") then "ASEAN"
+        when region_name = "アジア" then "アジア（ASEAN除く）"
+        else region_name
+    end as region_asean_name,
+    case 
+        when country_name IN ("インドネシア","カンボジア","シンガポール","タイ","フィリピン","ブルネイ","ベトナム","マレーシア","ミャンマー","ラオス") then "ASEAN"
+        when region_name = "アジア" then "アジア（ASEAN除く）"
+        when region_name = "中南米" then "その他"
+        when region_name = "大洋州" then "その他"
+        when region_name = "中東" then "その他"
+        when region_name = "アフリカ" then "その他"
+        when region_name is null then null
+        else region_name
+    end as region2_name,
+    case 
+        when country_name IN ("インドネシア","カンボジア","シンガポール","タイ","フィリピン","ブルネイ","ベトナム","マレーシア","ミャンマー","ラオス") then 10
+        when region_name = "アジア" then 20
+        when region_name = "北米" then 30
+        when region_name = "欧州" then 40
+        when region_name = "中南米" then 50
+        when region_name = "大洋州" then 50
+        when region_name = "中東" then 50
+        when region_name = "アフリカ" then 50
+        when region_name = "日本" then 60
+        when region_name is null then null
+        else 50
+    end as region2_sort,
+from
+    ${ref("m_nationality")} AS t1
+where
+    valid_status = "1"
+    and system_code = "${sys_code}"

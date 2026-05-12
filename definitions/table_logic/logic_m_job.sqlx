@@ -1,0 +1,72 @@
+config {
+  type: "view",
+  schema: "prod_logic_ar_jinji_basic",
+  name: "logic_m_job",
+  description: "職種マスタの役職「部課長」に「級」を付ける",
+  tags: [constants.CATEGORY_TAG.common_master],
+  bigquery: {
+    labels:{
+      "df_repository": "ws_shared_jinji-basic",
+      "step": constants.CATEGORY_STEP.logic,
+      "use": constants.CATEGORY_USE_CONTENTS.ar
+    }
+  }
+}
+
+js {
+  // 共通マスタを「人事給与システム」でフィルタするため（constants.jsで定義）
+  const sys_code = constants.SQL_PARAMETER.system_code;
+}
+
+select
+    t1.Valid_status,
+    t1.START_date,
+    t1.END_date,
+    t1.SYSTEM_code,
+    t1.KEY_code,
+    t1.KEY_name,
+    t1.worktime_type_code,
+    t1.worktime_type_name,
+    t1.worktime_type_SORT,
+    t1.employment_type_code,
+    t1.employment_type_name,
+    t1.employment_type_SORT,
+    t1.job_type_code,
+    t1.job_type_name,
+    t1.job_type_SORT,
+    t1.job_type_subcategory_code,
+    t1.job_type_subcategory_name,
+    t1.job_type_subcategory_SORT,
+    t1.job_code,
+    t1.job_name,
+    t1.job_SORT,
+    t1.job_title_code,
+    (
+        case t1.job_title_name
+        when "部長" then "部長級"
+        when "課長" then "課長級"
+        when "課長級補佐" then "課長級補佐級"
+        when "掛長" then "掛長級"
+        else t1.job_title_name
+        end
+    ) as job_title_name,
+    t1.job_title_sort,
+    t1.employment_subtype_code,
+    t1.employment_subtype_name,
+    t1.employment_subtype_sort,
+    t1.status,
+    t1.create_date,
+    t1.workrules_code,
+    t1.workrules_name,
+    t1.workrules_sort,
+    t1.job_type_category_code,
+    t1.job_type_category_name,
+    t1.job_type_category_sort,
+    t1.job_type_detailed_category_code,
+    t1.job_type_detailed_category_name,
+    t1.job_type_detailed_category_sort
+from
+    ${ref("m_job")} AS t1
+where
+    valid_status = "1"
+    and system_code = "${sys_code}"

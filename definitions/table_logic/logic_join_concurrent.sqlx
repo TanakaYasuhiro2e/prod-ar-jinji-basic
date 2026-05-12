@@ -1,0 +1,76 @@
+config {
+  type: "view",
+  schema: "prod_logic_ar_jinji_basic",
+  name: "logic_join_concurrent",
+  description: "副学長の教職員を抽出して統合した基本台帳とマージ",
+  tags: [constants.CATEGORY_TAG.jinji, constants.CATEGORY_TAG.work_product],
+  bigquery: {
+    labels:{
+      "df_repository": "ws_shared_jinji-basic",
+      "step": constants.CATEGORY_STEP.logic,
+      "use": constants.CATEGORY_USE_CONTENTS.ar
+    }
+  }
+}
+
+js {
+ const target_date = constants.SQL_PARAMETER.target_date;
+}
+
+WITH heinin_table AS (
+select
+  t3.kihon_key,
+  t3.kanshoku_code,
+  t3.kanshoku
+from (
+  select
+    t1.renkei_kijunbi,
+    t1.shokuin_bangou,
+    t2.kanshoku_code,
+    t2.kanshoku,
+    case when t1.renkei_kijunbi >= cast(replace(t2.kaishi_nengappi,"/","-") as date) then 1 else 0 end as kaisi_ato,
+    case when t1.renkei_kijunbi < cast(replace(t2.shuuryou_nengappi,"/","-") as date) then 1 else 0 end as syuryo_mae,
+    concat(cast(t1.renkei_kijunbi as string), t1.shokuin_bangou) as kihon_key
+  from ${ref("teiin_jinji_kihon_daichou")} t1
+  inner join
+  (
+  select
+    renkei_jisshibi,
+    shokuin_bangou,
+    kanshoku_code,
+    kanshoku,
+    kaishi_nengappi,
+    shuuryou_nengappi,
+  from ${ref("teiin_heinin")}
+  where kanshoku like ('%副学長%')
+  and COALESCE(kaishi_nengappi, '') <> ''
+  and COALESCE(shuuryou_nengappi, '') <> ''
+  ) t2
+  on t1.shokuin_bangou = t2.shokuin_bangou
+) t3
+where t3.kaisi_ato = 1 and t3.syuryo_mae = 1
+group by 
+  t3.kihon_key,
+  t3.kanshoku_code,
+  t3.kanshoku
+order by t3.kihon_key
+)
+
+select
+  t1.renkei_kijunbi,
+  t1.shokuin_bangou,
+  t2.kihon_key,
+  t2.kanshoku_code,
+  t2.kanshoku
+from ${ref("teiin_jinji_kihon_daichou")} t1
+left join heinin_table t2 on concat(cast(t1.renkei_kijunbi as string), t1.shokuin_bangou) = t2.kihon_key
+where
+  t1.renkei_kijunbi >= "${target_date}"
+  and (
+    -- 登録された日付のセパレータが「-」と「/」で混在しているため２パターンで指定する
+    format_date('%m-%d', t1.renkei_kijunbi) IN ('05-01','10-01') 
+    or
+    format_date('%m/%d', t1.renkei_kijunbi) IN ('05/01','10/01') 
+  )
+order by t1.renkei_kijunbi asc, t1.shokuin_bangou asc
+

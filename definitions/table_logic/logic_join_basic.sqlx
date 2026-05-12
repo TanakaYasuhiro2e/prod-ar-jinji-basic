@@ -1,0 +1,151 @@
+config {
+  type: "view",
+  schema: "prod_logic_ar_jinji_basic",
+  name: "logic_join_basic",
+  description: "定員内、非常勤の人事基本台帳を統合",
+  tags: [constants.CATEGORY_TAG.jinji, constants.CATEGORY_TAG.work_product],
+  bigquery: {
+    labels:{
+      "df_repository": "ws_shared_jinji-basic",
+      "step": constants.CATEGORY_STEP.logic,
+      "use": constants.CATEGORY_USE_CONTENTS.ar
+    }
+  },
+  columns: {
+    A01_017_renkei_kijunbi: "連携基準日",
+    A01_017_shokuin_bangou: "職員番号",
+    A01_017_seibetsu_kubun: "性別区分",
+    A01_017_seibetsu: "性別",
+    A01_017_seinengappi: "生年月日",
+    A01_017_nendomatsu_nenrei: "年度末年齢",
+    A01_017_honseki_kokuseki_code: "本籍（国籍）コード",
+    A01_017_honseki_kokuseki: "本籍（国籍）",
+    A01_017_kokuseki_kubun_code: "国籍区分コード",
+    A01_017_kokuseki_kubun: "国籍区分",
+	A01_017_zairyuu_shikaku_code: "在留資格コード",
+	A01_017_zairyuu_shikaku: "在留資格",
+    A01_017_ninmen_kubun_code: "任免区分コード",
+    A01_017_ninmen_kubun: "任免区分",
+    A01_017_kanmei_code: "官名コード",
+    A01_017_kanmei: "官名",
+    A01_017_shokushu_code: "職種コード",
+    A01_017_shokushu: "職種",
+    A01_017_yosankou_code: "予算項コード",
+    A01_017_yosankou: "予算項",
+    A01_017_gakuiki_kubun: "学域区分",
+    A01_017_gakuiki_mei: "学域名称",
+    A01_017_gakkei_kubun: "学系区分",
+    A01_017_gakkei_mei: "学系名称",
+    A01_017_shozoku_code: "所属コード",
+    A01_017_shozoku: "所属",
+    A01_017_bukyoku_mei_code: "部局名コード",
+    A01_017_bukyoku_mei: "部局名",
+    A01_067_shokuin_kubun_code: "職員区分コード",
+    A01_067_shokuin_kubun: "職員区分",
+    A01_067_keihi_code: "経費コード",
+    A01_067_keihi: "経費",
+    Z01_001_teihi_kubun: "定非区分"
+  }
+}
+
+js {
+    // 人事基本情報のフィルタ用日付（constants.jsで定義）
+    const target_date = constants.SQL_PARAMETER.target_date;    
+}
+
+(
+SELECT
+    
+	t1.renkei_kijunbi AS A01_017_renkei_kijunbi,
+	t1.shokuin_bangou AS A01_017_shokuin_bangou,
+	cast(t1.seibetsu_kubun AS STRING) AS A01_017_seibetsu_kubun,
+	t1.seibetsu AS A01_017_seibetsu,
+	t1.seinengappi AS A01_017_seinengappi,
+	t1.nendomatsu_nenrei AS A01_017_nendomatsu_nenrei,
+	cast(t1.honseki_kokuseki_code AS STRING) AS A01_017_honseki_kokuseki_code,
+	trim(t1.honseki_kokuseki) AS A01_017_honseki_kokuseki,
+	t1.kokuseki_kubun_code AS A01_017_kokuseki_kubun_code,
+	t1.kokuseki_kubun AS A01_017_kokuseki_kubun,
+	t1.zairyuu_shikaku_code AS A01_017_zairyuu_shikaku_code,
+	t1.zairyuu_shikaku AS A01_017_zairyuu_shikaku,
+	t1.ninmen_kubun_code AS A01_017_ninmen_kubun_code,
+	t1.ninmen_kubun AS A01_017_ninmen_kubun,
+	t1.kanmei_code AS A01_017_kanmei_code,
+	t1.kanmei AS A01_017_kanmei,
+	t1.shokushu_code AS A01_017_shokushu_code,
+	t1.shokushu AS A01_017_shokushu,
+	t1.yosankou_code AS A01_017_yosankou_code,
+	t1.yosankou AS A01_017_yosankou,
+	cast(t1.gakuiki_kubun AS STRING) AS A01_017_gakuiki_kubun,
+	t1.gakuiki_mei AS A01_017_gakuiki_mei,
+	t1.gakkei_kubun AS A01_017_gakkei_kubun,
+	t1.gakkei_mei AS A01_017_gakkei_mei,
+	t1.shozoku_code AS A01_017_shozoku_code,
+	t1.shozoku AS A01_017_shozoku,
+	t1.bukyoku_mei_code AS A01_017_bukyoku_mei_code,
+	t1.bukyoku_mei AS A01_017_bukyoku_mei,
+	'' AS A01_067_shokuin_kubun_code,
+	'' AS A01_067_shokuin_kubun,
+	'' AS A01_067_keihi_code,
+	'' AS A01_067_keihi,
+	'定員内' AS Z01_001_teihi_kubun
+FROM
+    ${ref("logic_preprocessing_jinji_basic_data_fulltime")} AS t1
+where
+    t1.renkei_kijunbi >= "${target_date}"
+    and (
+        -- 登録された日付のセパレータが「-」と「/」で混在しているため２パターンで指定する
+        format_date('%m-%d', t1.renkei_kijunbi) IN ('05-01','10-01') 
+        or
+        format_date('%m/%d', t1.renkei_kijunbi) IN ('05/01','10/01') 
+    )
+order by t1.renkei_kijunbi asc, t1.shokuin_bangou asc
+)
+union all
+(
+SELECT
+	t2.renkei_kijunbi AS A01_017_renkei_kijunbi,
+	t2.shokuin_bangou AS A01_017_shokuin_bangou,
+	t2.seibetsu_kubun AS A01_017_seibetsu_kubun,
+	t2.seibetsu AS A01_017_seibetsu,
+	PARSE_DATE('%Y-%m-%d', REPLACE(t2.seinengappi, '/', '-')) AS A01_017_seinengappi,
+	t2.nenrei AS A01_017_nendomatsu_nenrei,
+	t2.honseki_kokuseki_code AS A01_017_honseki_kokuseki_code,
+	trim(t2.honseki_kokuseki) AS A01_017_honseki_kokuseki,
+	t2.kokuseki_kubun_code AS A01_017_kokuseki_kubun_code,
+	t2.kokuseki_kubun AS A01_017_kokuseki_kubun,
+	'' AS A01_017_zairyuu_shikaku_code,
+	'' AS A01_017_zairyuu_shikaku,
+	cast(t2.ninmen_kubun_code AS STRING) AS A01_017_ninmen_kubun_code,
+	t2.ninmen_kubun AS A01_017_ninmen_kubun,
+	'' AS A01_017_kanmei_code,
+	'' AS A01_017_kanmei,
+	t2.shokuin_mei_code AS A01_017_shokushu_code,
+	t2.shokuin_mei AS A01_017_shokushu,
+	'' AS A01_017_yosankou_code,
+	'' AS A01_017_yosankou,
+	'' AS A01_017_gakuiki_kubun,
+	'' AS A01_017_gakuiki_mei,
+	'' AS A01_017_gakkei_kubun,
+	'' AS A01_017_gakkei_mei,
+	t2.shozoku_code AS A01_017_shozoku_code,
+	t2.shozoku AS A01_017_shozoku,
+	t2.bukyoku_code AS A01_017_bukyoku_mei_code,
+	t2.bukyoku_mei AS A01_017_bukyoku_mei,
+	cast(t2.shokuin_kubun_code AS STRING) AS A01_067_shokuin_kubun_code,
+	t2.shokuin_kubun AS A01_067_shokuin_kubun,
+	t2.keihi_code AS A01_067_keihi_code,
+	t2.keihi AS A01_067_keihi,
+	'非常勤' AS Z01_001_teihi_kubun
+FROM
+    ${ref("logic_preprocessing_jinji_basic_data_parttime")} AS t2
+where
+    t2.renkei_kijunbi >= "${target_date}"
+    and (
+        -- 登録された日付のセパレータが「-」と「/」で混在しているため２パターンで指定する
+        format_date('%m-%d', t2.renkei_kijunbi) IN ('05-01','10-01') 
+        or
+        format_date('%m/%d', t2.renkei_kijunbi) IN ('05/01','10/01') 
+    )
+order by t2.renkei_kijunbi asc, t2.shokuin_bangou asc
+)

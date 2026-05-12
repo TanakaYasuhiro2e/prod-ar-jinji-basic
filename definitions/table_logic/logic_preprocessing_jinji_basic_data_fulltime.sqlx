@@ -1,0 +1,35 @@
+config {
+  type: "view",
+  schema: "prod_logic_ar_jinji_basic",
+  name: "logic_preprocessing_jinji_basic_data_fulltime",
+  description: "定員人事基本台帳の前処理（個別データ対応）",
+  tags: [constants.CATEGORY_TAG.jinji, constants.CATEGORY_TAG.work_product],
+  bigquery: {
+    labels:{
+      "df_repository": "ws_shared_jinji-basic",
+      "step": constants.CATEGORY_STEP.logic,
+      "use": constants.CATEGORY_USE_CONTENTS.ar
+    }
+  }
+}
+
+js {
+    const target_date = constants.SQL_PARAMETER.target_date;
+}
+
+SELECT
+  -- 加工後に置き換える項目以外をすべて抽出
+  t1.* EXCEPT (honseki_kokuseki_code, honseki_kokuseki),
+
+  case
+  when t1.shokuin_bangou = "6A33C008443DE0930EDC0942A0EF83D4C493F4C9FED14B3023F88B4A3CB267D5"
+    and t1.renkei_kijunbi = "2025-05-01" then "109"
+  else t1.honseki_kokuseki_code
+  end as honseki_kokuseki_code,
+  case
+  when t1.shokuin_bangou = "6A33C008443DE0930EDC0942A0EF83D4C493F4C9FED14B3023F88B4A3CB267D5"
+    and t1.renkei_kijunbi = "2025-05-01" then "中国"
+  else t1.honseki_kokuseki
+  end as honseki_kokuseki,
+FROM
+  ${ref("teiin_jinji_kihon_daichou")} AS t1

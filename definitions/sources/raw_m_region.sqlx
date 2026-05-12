@@ -1,0 +1,9 @@
+/*
+共通マスタ「地域マスタ」テーブルをソースとして宣言
+*/
+config {
+  type: "declaration",
+  database: "dwh-ir",
+  schema: "prod_mart_master_common",
+  name: "m_region"
+}

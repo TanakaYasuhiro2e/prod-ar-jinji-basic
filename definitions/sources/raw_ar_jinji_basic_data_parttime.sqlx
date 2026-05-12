@@ -1,0 +1,9 @@
+/*
+人事給与システム「非職基本台帳」テーブルをソースとして宣言
+*/
+config {
+  type: "declaration",
+  database: "dwh-ir",
+  schema: "jinji",
+  name: "hishoku_kihon_daichou"
+}

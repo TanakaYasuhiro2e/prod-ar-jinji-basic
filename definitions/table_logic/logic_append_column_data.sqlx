@@ -1,0 +1,110 @@
+config {
+  type: "view",
+  schema: "prod_logic_ar_jinji_basic",
+  name: "logic_append_column_data",
+  description: "項目追加（マスタ紐付用キー、年代）および空白データ置換（国籍区分）",
+  tags: [constants.CATEGORY_TAG.jinji, constants.CATEGORY_TAG.work_product],
+  bigquery: {
+    labels:{
+      "df_repository": "ws_shared_jinji-basic",
+      "step": constants.CATEGORY_STEP.logic,
+      "use": constants.CATEGORY_USE_CONTENTS.ar
+    }
+  },
+  columns: {
+    A01_017_renkei_kijunbi: "連携基準日",
+    A01_017_shokuin_bangou: "職員番号",
+    A01_017_seibetsu_kubun: "性別区分",
+    A01_017_seibetsu: "性別",
+    A01_017_seinengappi: "生年月日",
+    A01_017_nendomatsu_nenrei: "年度末年齢",
+    A01_017_honseki_kokuseki_code: "本籍（国籍）コード",
+    A01_017_honseki_kokuseki: "本籍（国籍）",
+    A01_017_kokuseki_kubun_code: "国籍区分コード",
+    A01_017_kokuseki_kubun: "国籍区分",
+    A01_017_zairyuu_shikaku_code: "在留資格コード",
+    A01_017_zairyuu_shikaku: "在留資格",
+    A01_017_ninmen_kubun_code: "任免区分コード",
+    A01_017_ninmen_kubun: "任免区分",
+    A01_017_kanmei_code: "官名コード",
+    A01_017_kanmei: "官名",
+    A01_017_shokushu_code: "職種コード",
+    A01_017_shokushu: "職種",
+    A01_017_yosankou_code: "予算項コード",
+    A01_017_yosankou: "予算項",
+    A01_017_gakuiki_kubun: "学域区分",
+    A01_017_gakuiki_mei: "学域名称",
+    A01_017_gakkei_kubun: "学系区分",
+    A01_017_gakkei_mei: "学系名称",
+    A01_017_shozoku_code: "所属コード",
+    A01_017_shozoku: "所属",
+    A01_017_bukyoku_mei_code: "部局名コード",
+    A01_017_bukyoku_mei: "部局名",
+    A01_067_shokuin_kubun_code: "職員区分コード",
+    A01_067_shokuin_kubun: "職員区分",
+    A01_067_keihi_code: "経費コード",
+    A01_067_keihi: "経費",
+    Z01_001_teihi_kubun: "定非区分",
+    key_m_job: "職種紐づけ用",
+    key_m_platform: "学域紐づけ用",
+    key_m_affiliation: "部局紐づけ用",
+    key_m_nationality: "国籍紐づけ用",
+    Z01_001_era_10: "年代_10歳区切り",
+    Z01_001_era_5: "年代_5歳区切り",
+    Z01_001_base_date_age: "基準日時点年齢"
+  }
+}
+
+SELECT
+  -- 加工後に置き換える項目以外をすべて抽出
+  t1.* EXCEPT (A01_017_kokuseki_kubun_code, A01_017_kokuseki_kubun),
+
+  -- 年代（10歳区切り、5歳区切り）を作成
+  cast((FLOOR(t1.A01_017_nendomatsu_nenrei / 10) * 10) AS STRING) || "代" as Z01_001_era_10,
+  cast((FLOOR(t1.A01_017_nendomatsu_nenrei / 5) * 5) AS STRING) || "歳～" || cast((FLOOR(t1.A01_017_nendomatsu_nenrei / 5) * 5 + 4) AS STRING) || "歳" as Z01_001_era_5,
+
+  -- 基準日時点の年齢を計算（日まで考慮）
+  DATE_DIFF(t1.A01_017_renkei_kijunbi, t1.A01_017_seinengappi, YEAR) 
+  + IF(
+    DATE_DIFF(
+      t1.A01_017_renkei_kijunbi, 
+      DATE_ADD(t1.A01_017_seinengappi, INTERVAL DATE_DIFF(t1.A01_017_renkei_kijunbi, t1.A01_017_seinengappi, YEAR) YEAR
+      ), 
+    DAY
+    ) >= 0, 
+    0, 
+    -1
+  ) as Z01_001_base_date_age,
+
+  -- 国籍区分の読替
+  case
+    when A01_017_kokuseki_kubun_code = "1" or A01_017_kokuseki_kubun_code = "2" then A01_017_kokuseki_kubun_code
+    else "1"
+  end as A01_017_kokuseki_kubun_code,
+  case
+    when A01_017_kokuseki_kubun = "日本国籍" or A01_017_kokuseki_kubun = "外国籍" then A01_017_kokuseki_kubun
+    else "日本国籍"
+  end as A01_017_kokuseki_kubun,
+  
+  -- 職種マスタと紐づけるキーの作成
+	case
+    when A01_017_kanmei_code = "K" and A01_017_shokushu like "%専門業務職員%" then "99999" || trim(A01_017_shokushu)
+    else trim(A01_017_shokushu_code) || trim(A01_017_shokushu)
+	end as key_m_job,
+
+  -- 学域マスタと紐づけるキーの作成
+  case
+    when A01_017_gakuiki_kubun is not null and A01_017_gakkei_kubun is not null then trim(A01_017_gakuiki_kubun)
+    when A01_017_gakuiki_kubun is null and  A01_017_gakkei_kubun = "050001" then "050"
+    when A01_017_gakuiki_kubun = "050" and  A01_017_gakkei_kubun is null then ""
+    else ""
+	end as key_m_platform,
+
+  -- 部局マスタと紐づけるキーの作成
+  trim(A01_017_bukyoku_mei_code) || trim(A01_017_bukyoku_mei) as key_m_affiliation,
+
+  -- 国籍マスタと紐づけるキーの作成
+  trim(A01_017_honseki_kokuseki_code) || trim(A01_017_honseki_kokuseki) as key_m_nationality
+
+FROM
+    ${ref("logic_join_basic")} t1
