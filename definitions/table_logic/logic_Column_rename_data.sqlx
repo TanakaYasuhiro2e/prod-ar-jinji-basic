@@ -2,7 +2,7 @@ config {
   type: "view",
   schema: "prod_logic_ar_jinji_basic",
   name: "logic_Column_rename_data",
-  description: "不要なデータの削除",
+  description: "不要な項目の削除およびデータ基準日を各年度5月1日に絞る",
   tags: [constants.CATEGORY_TAG.jinji, constants.CATEGORY_TAG.work_product],
   bigquery: {
     labels:{

@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "prod_mart_ar_jinji_basic",
   name: "mart_ar_jinji_basicdata",
-  description: "人事基本情報（人事給与システムの定員内および非常勤の人事基本台帳）",
+  description: "人事基本情報（人事給与システムの定員内および非常勤の人事基本台帳_データ基準日：各年度5月1日）",
   tags: [constants.CATEGORY_TAG.jinji, constants.CATEGORY_TAG.work_product],
   bigquery: {
     labels:{
