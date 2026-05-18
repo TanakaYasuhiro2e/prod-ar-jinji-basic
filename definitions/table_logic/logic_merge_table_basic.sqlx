@@ -233,7 +233,7 @@ FROM
     left join ${ref("logic_m_job")} t2 on t1.key_m_job = t2.key_code || t2.key_name
     left join (select * from ${ref("m_affiliation")} where valid_status = "1" and system_code = "${sys_code}") t3 on t1.key_m_affiliation = t3.key_code || t3.key_name
     left join ${ref("logic_m_nationality")} t4 on t1.key_m_nationality = t4.key_code || t4.key_name
-    left join (select * from ${ref("m_platform")} where valid_status = "1" and system_code = "${sys_code}") t5 on t1.key_m_platform = t5.key_code || t5.key_name
+    left join (select * from ${ref("m_platform")} where valid_status = "1" and system_code = "${sys_code}") t5 on t1.key_m_platform = t5.key_code
     left join (select * from ${ref("m_facultyconsort")} where valid_status = "1" and system_code = "${sys_code}") t6 on t1.A01_017_gakkei_kubun = t6.key_code
     left join ${ref("logic_join_concurrent")} t7 on t1.A01_017_renkei_kijunbi = t7.renkei_kijunbi and t1.A01_017_shokuin_bangou = t7.shokuin_bangou
     left join (select * from ${ref("m_common")} where valid_status = "1" and system_code = "${sys_code}" and type_code= "0020") t8 on t1.A01_017_yosankou_code = t8.data_code and t1.A01_017_yosankou = t8.data_name
