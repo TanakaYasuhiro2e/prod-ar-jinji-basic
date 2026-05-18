@@ -82,7 +82,8 @@ SELECT
     else "1"
   end as A01_017_kokuseki_kubun_code,
   case
-    when A01_017_kokuseki_kubun = "日本国籍" or A01_017_kokuseki_kubun = "外国籍" then A01_017_kokuseki_kubun
+    when A01_017_kokuseki_kubun = "日本" then "日本国籍"
+    when A01_017_kokuseki_kubun = "外国" then "外国籍"
     else "日本国籍"
   end as A01_017_kokuseki_kubun,
   
